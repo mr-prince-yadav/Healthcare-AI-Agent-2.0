@@ -45,6 +45,76 @@ def save_profile(user_id, profile):
 
 # ---------------------- INIT ----------------------
 st.set_page_config(page_title="Healthcare Agent")
+st.markdown("""
+<style>
+
+/* -------- ROOT BACKGROUND (SYSTEM LIGHT / DARK) -------- */
+.stApp {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/* -------- CARD STYLE (Adaptive) -------- */
+.health-card {
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 1rem;
+}
+
+/* -------- TAB BAR -------- */
+div[data-baseweb="tab-list"] {
+    background-color: var(--secondary-background-color);
+    padding: 8px;
+    border-radius: 16px;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* -------- TAB BUTTON -------- */
+button[data-baseweb="tab"] {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-radius: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(128,128,128,0.2);
+    padding: 10px 16px;
+    transition: all 0.25s ease;
+}
+
+/* -------- TAB HOVER -------- */
+button[data-baseweb="tab"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.12);
+}
+
+/* -------- ACTIVE TAB -------- */
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white !important;
+    border: none;
+    box-shadow: 0px 6px 16px rgba(102,126,234,0.35);
+}
+
+/* -------- CHAT MESSAGE -------- */
+.stChatMessage {
+    background-color: var(--secondary-background-color);
+    border-radius: 14px;
+    padding: 10px;
+}
+
+/* -------- INPUT BOX / CHAT INPUT -------- */
+textarea,
+input {
+    background-color: var(--secondary-background-color) !important;
+    color: var(--text-color) !important;
+    border-radius: 12px !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- SCHEDULER BOOTSTRAP ----------------
 if "scheduler_started" not in st.session_state:
@@ -140,14 +210,14 @@ def main():
 
     # ---------------- MAIN TABS ----------------
     tabs = st.tabs([
-        "    👤    ",
-        "    🩺    ",
-        "    💊    ",
-        "    📊    ",
-        "    🧠    ",
-        "    📅    ",
-        "    🤖    ",
-        "    ⚙️    "
+        "👤",
+        "🩺",
+        "💊",
+        "📊",
+        "🧠",
+        "📅",
+        "🤖",
+        "⚙️"
     ])
 
     # ---------------- PROFILE TAB ----------------
@@ -569,6 +639,7 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
 
