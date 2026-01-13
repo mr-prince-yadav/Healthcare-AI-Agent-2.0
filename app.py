@@ -6,78 +6,69 @@ from reminder import send_appointment_email
 from relay_email import send_email
 from dotenv import load_dotenv
 from health_engine import generate_recommendations
-import sqlite3
-from config import GOOGLE_API_KEY
+
+from supabase_client import supabase_user, supabase_admin
+
+import threading
+from scheduler import start_scheduler
+
+
+
 import json
-import time
-from datetime import datetime
-from auth import create_users_table, create_user, authenticate_user
+
+from datetime import datetime, timedelta
+from auth import create_user, authenticate_user
+
 from graph_builder import build_graph
 from functions import llm, HumanMessage
-from ui import render_login, render_signup, render_logout, render_profile_view, render_profile_edit
+from ui import render_login, render_signup, render_profile_view, render_profile_edit
+
 import base64
 from PIL import Image
 from io import BytesIO
 
+supabase=supabase_user
 load_dotenv()
+
+
 # ---------------------- DATABASE HELPERS ----------------------
-DB_FILE = "db_name"
+def load_profile(user_id):
+    res = supabase.table("profiles").select("data").eq("user_id", user_id).execute()
+    return res.data[0]["data"] if res.data else {}
 
-def get_conn():
-    return sqlite3.connect(DB_FILE, check_same_thread=False)
+def save_profile(user_id, profile):
+    supabase.table("profiles").upsert({
+        "user_id": user_id,
+        "data": profile
+    }).execute()
 
-def create_profile_table():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS profiles (
-            username TEXT PRIMARY KEY,
-            data TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-def load_profile(username):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT data FROM profiles WHERE username = ?", (username,))
-    row = cur.fetchone()
-    conn.close()
-    return json.loads(row[0]) if row else {}
-
-def save_profile(username, profile):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        "REPLACE INTO profiles (username, data) VALUES (?, ?)",
-        (username, json.dumps(profile))
-    )
-    conn.commit()
-    conn.close()
-
-
-# ------------------- Auto refresh mechanism -------------------
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-# Check if 10 seconds have passed
-if time.time() - st.session_state.last_refresh > 10:
-    st.session_state.last_refresh = time.time()
-    st.rerun()
 
 # ---------------------- INIT ----------------------
-st.set_page_config(page_title="Healthcare Agent", layout="wide")
-create_users_table()
-create_profile_table()
+st.set_page_config(page_title="Healthcare Agent")
+
+def load_css():
+    with open("main.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+load_css()
+
+# ---------------- SCHEDULER BOOTSTRAP ----------------
+if "scheduler_started" not in st.session_state:
+    scheduler_thread = threading.Thread(
+        target=start_scheduler,
+        daemon=True
+    )
+    scheduler_thread.start()
+    st.session_state.scheduler_started = True
 
 # ---------------------- MAIN ----------------------
 def main():
     # ---------------- SESSION STATE ----------------
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
-    if "username" not in st.session_state:
-        st.session_state.username = None
+    if "user_id" not in st.session_state:
+        st.session_state.user_id = None
+
     if "profile" not in st.session_state:
         st.session_state.profile = {}
     if "profile_completed" not in st.session_state:
@@ -103,27 +94,40 @@ def main():
         t1, t2 = st.tabs(["Login", "Sign Up"])
         with t1:
             u, p = render_login()
+    
             if st.button("Login"):
-                if authenticate_user(u, p):
+                user_id = authenticate_user(u, p)
+                if user_id:
                     st.session_state.logged_in = True
-                    st.session_state.username = u
-                    profile = load_profile(u)
+                    st.session_state.user_id = user_id
+
+                    profile = load_profile(user_id)
                     if profile:
                         st.session_state.profile = profile
                         st.session_state.profile_completed = True
                     else:
                         st.session_state.profile = {}
                         st.session_state.profile_completed = False
-                    st.rerun()  # safe rerun to load tabs
+
+                    st.rerun()
                 else:
                     st.error("Invalid credentials")
+
         with t2:
             u, p = render_signup()
             if st.button("Create Account"):
                 if create_user(u, p):
-                    st.success("Account created. Login now.")
+                    st.success(
+                         "Account created successfully.\n\n"
+                         "🚨 A confirmation email has been sent to your registered email address.\n\n"
+                         "🚨 Please confirm your email before logging in."
+                    )
                 else:
-                    st.error("Username already exists")
+                    st.error(
+                        "⚠️ Account already exists.\n\n"
+                        "⚠️ A confirmation email has been sent to your registered email address.\n\n"
+                        "⚠️ Please confirm your email before logging in."
+                    )
         return  # Stop until login done
 
     # ---------------- FIRST TIME PROFILE COMPLETION ----------------
@@ -134,7 +138,8 @@ def main():
         p = st.session_state.profile
         if all(p.get(r) for r in required):
             if st.button("✅ Finish Profile Setup"):
-                save_profile(st.session_state.username,p)
+                save_profile(st.session_state.user_id, p)
+
                 st.session_state.profile_completed = True
                 st.rerun()
         return  # Stop until profile completed
@@ -142,13 +147,13 @@ def main():
     # ---------------- MAIN TABS ----------------
     tabs = st.tabs([
         "👤 Profile",
-        "⚙️ Settings",
         "🩺 Symptom Checker",
         "💊 Medication Reminder",
         "📊 Health Tracker",
         "🧠 Mental Health",
         "📅 Appointments",
-        "🤖 Help"
+        "🤖 Help",
+        "⚙️ Settings"
     ])
 
     # ---------------- PROFILE TAB ----------------
@@ -175,28 +180,18 @@ def main():
 
         # Real-time reminders (visual in app)
         # Real-time reminders (visual in app)
-        from datetime import datetime, timedelta
+        
 
         now = datetime.now()
-        email = st.session_state.profile.get("email")
+        email = st.session_state.profile.get("email") or ""
 
-        for m in st.session_state.profile.get("medication_list", []):
-            med_time = datetime.strptime(m["time"], "%H:%M").time()
-            med_dt = datetime.combine(now.date(), med_time)
-
-            if timedelta(minutes=0) <= (med_dt - now) <= timedelta(hours=1):
-                send_email(
-                    email,
-                    "Medication Reminder",
-                    f"Take {m['med_name']} at {m['time']} today."
-                )
-
+        
         st.subheader("⏰ Real-time Reminders")
         current_day = now.strftime("%a")
         current_time = now.strftime("%H:%M")
         reminders = []
 
-        from datetime import timedelta, datetime
+        
 
         now = datetime.now()
         current_day = now.strftime("%a")  # Mon, Tue, etc.
@@ -216,17 +211,56 @@ def main():
             st.warning("\n".join(reminders))
         else:
             st.info("No alarms currently.")
+        # ✅ LOGOUT BUTTON (PASTE HERE)
+        st.divider()
+        if st.button("🚪 Logout", type="primary"):
+            st.session_state.clear()
+            st.rerun()
 
-            
-    # ---------------- SETTINGS TAB ----------------
-    with tabs[1]:
-        render_profile_edit()
-        if st.button("💾 Save Profile Changes"):
-            save_profile(st.session_state.username, st.session_state.profile)
-            st.success("Profile updated!")
+        ################### 
+        st.divider()
+        st.subheader("⚠️ Delete Account")
+
+        if "show_delete_confirm" not in st.session_state:
+            st.session_state.show_delete_confirm = False
+
+        if st.button("🗑️ Delete My Account"):
+            st.session_state.show_delete_confirm = True
+
+        if st.session_state.show_delete_confirm:
+            confirm_text = st.text_input(
+                'Type "CONFIRM" to permanently delete your account',
+                key="confirm_delete_text"
+            )
+
+            if st.button("OK", key="confirm_delete_btn"):
+                if confirm_text != "CONFIRM":
+                    st.error('You must type exactly "CONFIRM"')
+                else:
+                    user_id = st.session_state.user_id
+
+                    # ---- DELETE USER DATA ----
+                    supabase_admin.table("profiles").delete().eq("user_id", user_id).execute()
+
+                    try:
+                        supabase_admin.table("medications").delete().eq("user_id", user_id).execute()
+                        supabase_admin.table("appointments").delete().eq("user_id", user_id).execute()
+                        supabase_admin.table("health_logs").delete().eq("user_id", user_id).execute()
+                    except:
+                        pass
+
+                    # ---- DELETE AUTH USER ----
+                    supabase_admin.auth.admin.delete_user(user_id)
+
+                    # ---- CLEAR SESSION ----
+                    st.session_state.clear()
+                    st.success("Account permanently deleted")
+                    st.rerun()
+
+
 
     # ---------------- SYMPTOM CHECKER TAB ----------------
-    with tabs[2]:
+    with tabs[1]:
         st.subheader("🩺 Symptom Checker")
         symptom = st.text_input("Describe your symptom")
         if st.button("Analyze Symptom"):
@@ -243,10 +277,10 @@ def main():
                 if category == "emergency":
                     st.warning("🚨 Emergency detected! Seek immediate attention.")
                 st.session_state.profile["last_symptom"] = symptom
-                save_profile(st.session_state.username, st.session_state.profile)
+                save_profile(st.session_state.user_id,st.session_state.profile)
 
     # ---------------- MEDICATION REMINDER TAB ----------------
-    with tabs[3]:
+    with tabs[2]:
         st.subheader("💊 Medication Reminder")
 
         med_options = ["Aspirin","Vitamin D","Metformin","Ibuprofen","Other"]
@@ -272,10 +306,15 @@ def main():
 
         if st.button("💾 Add Medication", key="add_med_button"):
             if med_name and days:
-                days = [DAY_ABBR.get(d, d) for d in days]  # normalize to "Mon", "Tue", etc.
+                DAY_ABBR = {"Monday":"Mon","Tuesday":"Tue","Wednesday":"Wed",
+                            "Thursday":"Thu","Friday":"Fri","Saturday":"Sat","Sunday":"Sun"}
+
+                # Normalize days before saving
+                days = [DAY_ABBR.get(d, d) for d in days]
+
                 entry = {"med_name": med_name, "time": med_time.strftime("%H:%M"), "days": days}
                 st.session_state.profile["medication_list"].append(entry)
-                save_profile(st.session_state.username, st.session_state.profile)
+                save_profile(st.session_state.user_id,st.session_state.profile)
 
                 st.success(f"{med_name} scheduled at {entry['time']} on {', '.join(days)}")
                 # Remove direct assignment to session_state; rerun will reset multiselect
@@ -288,7 +327,7 @@ def main():
         # CLEAR ALL MEDICATIONS
         if st.button("🗑️ Clear All Medications"):
             st.session_state.profile["medication_list"] = []
-            save_profile(st.session_state.username, st.session_state.profile)
+            save_profile(st.session_state.user_id,st.session_state.profile)
             st.rerun()  # clear instantly
 
         # SHOW UPCOMING MEDICATIONS
@@ -301,7 +340,7 @@ def main():
             st.info("No upcoming medications scheduled.")
 
     # ---------------- HEALTH TRACKER TAB ----------------
-    with tabs[4]:
+    with tabs[3]:
         st.subheader("📊 Health Tracker")
         p = st.session_state.profile
         p["heart_rate"] = st.number_input("Heart Rate (bpm)",value=p.get("heart_rate",70))
@@ -310,7 +349,8 @@ def main():
         p["glucose"] = st.number_input("Blood Glucose (mg/dL)",value=p.get("glucose",90))
         if st.button("💾 Save Health Data"):
             st.session_state.profile = p
-            save_profile(st.session_state.username,p)
+            save_profile(st.session_state.user_id, p)
+
 
             weight = p.get("weight",70)
             height_m = p.get("height",170)/100
@@ -357,7 +397,7 @@ def main():
                 st.success(r)
 
     # ---------------- MENTAL HEALTH TAB ----------------
-    with tabs[5]:
+    with tabs[4]:
         st.subheader("🧠 Mental Health Chat")
 
         if "mental_chat" not in st.session_state:
@@ -390,9 +430,10 @@ def main():
 
     # ---------------- APPOINTMENTS TAB ----------------
     # ---------------- APPOINTMENTS TAB ----------------
-    with tabs[6]:
+    with tabs[5]:
         st.subheader("📅 Appointment Scheduler")
-        email = st.session_state.profile.get("email")
+        email = st.session_state.profile.get("email") or ""
+
 
         # Doctor categories
         DOCTORS = {
@@ -414,11 +455,11 @@ def main():
             appt_str = f"{date} {time_input} with {doctor} ({doctor_type})"
             appointments.append(appt_str)
             st.session_state.profile["appointments"] = appointments
-            save_profile(st.session_state.username, st.session_state.profile)
+            save_profile(st.session_state.user_id,st.session_state.profile)
 
             # Send instant email after scheduling
-            from reminder import send_appointment_email
-            send_appointment_email(st.session_state.username, appt_str, action="scheduled")
+            
+            send_appointment_email(st.session_state.user_id, appt_str, action="scheduled")
 
             st.success(f"Appointment scheduled with {doctor}!")
             st.info("Reminder emails will be sent automatically by the background scheduler.")
@@ -436,11 +477,11 @@ def main():
                 if st.button(f"🗑️ Delete #{i}", key=f"del_{i}"):
                     removed = appointments.pop(i)
                     st.session_state.profile["appointments"] = appointments
-                    save_profile(st.session_state.username, st.session_state.profile)
+                    save_profile(st.session_state.user_id,st.session_state.profile)
 
                     # Send instant email after deletion
-                    from reminder import send_appointment_email
-                    send_appointment_email(st.session_state.username, removed, action="deleted")
+                    
+                    send_appointment_email(st.session_state.user_id, removed, action="deleted")
 
                     st.success(f"Appointment deleted: {removed}")
                     st.rerun()
@@ -480,12 +521,12 @@ def main():
                         old_appt = appointments[i]
                         appointments[i] = f"{new_date} {new_time} with {new_doctor} ({old_type})"
                         st.session_state.profile["appointments"] = appointments
-                        save_profile(st.session_state.username, st.session_state.profile)
+                        save_profile(st.session_state.user_id,st.session_state.profile)
 
                         # Send instant email after reschedule
-                        from reminder import send_appointment_email
+                        
                         send_appointment_email(
-                            st.session_state.username,
+                            st.session_state.user_id,
                             old_appt,
                             action="rescheduled"
                         )
@@ -495,7 +536,7 @@ def main():
                         st.rerun()
 
     # ---------------- HELP TAB ----------------
-    with tabs[7]:
+    with tabs[6]:
         st.subheader("🤖 Help Chatbot")
         query = st.text_input("Ask a question")
         if st.button("Send", key="help_chat_send"):
@@ -503,6 +544,34 @@ def main():
                 prompt = f"User profile: {json.dumps(st.session_state.profile)}\nUser question: {query}"
                 response = llm.invoke([HumanMessage(content=prompt)])
                 st.info(response.content)
+       
+        # ---------------- SETTINGS TAB ----------------
+    with tabs[7]:
+        st.subheader("⚙️ Settings")
+
+        # Toggle between Edit and Saved, default to Saved
+        mode = st.radio("Mode:", ["Saved", "Edit"], index=0, horizontal=True)  # Saved default
+
+        p = st.session_state.profile
+
+        if mode == "Edit":
+            render_profile_edit()  # Editable
+            if st.button("💾 Save Profile Changes"):
+                save_profile(st.session_state.user_id, st.session_state.profile)
+                st.success("Profile updated!")
+        else:
+            # Read-only view: show all fields from render_profile_edit
+            st.write("### Your Profile Data")
+            st.text(f"Name: {p.get('name','')}")
+            st.text(f"Age: {p.get('age','')}")
+            st.text(f"Weight: {p.get('weight','')} kg")
+            st.text(f"Height: {p.get('height','')} cm")
+            st.text(f"Mobile: {p.get('mobile','')}")
+            st.text(f"Email: {p.get('email','')}")
+            st.text(f"Disease: {p.get('disease','')}")
+            st.text(f"Blood Group: {p.get('blood_group','')}")
+            st.text(f"Medications: {', '.join([m['med_name'] for m in p.get('medication_list', [])])}")
+            st.text(f"Appointments: {len(p.get('appointments', []))} scheduled")
 
 if __name__=="__main__":
     main()
