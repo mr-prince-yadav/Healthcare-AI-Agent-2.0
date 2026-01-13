@@ -417,11 +417,7 @@ def main():
                 prompt = f"""
                 You are a mental health and healthcare assistant.
                 User profile: {json.dumps(st.session_state.profile)}
-                MAX_HISTORY = 6
-                chat_history = st.session_state.mental_chat[-MAX_HISTORY:]
-                
-                Conversation: {chat_history}
-
+                Conversation: {st.session_state.mental_chat}
                 """
 
                 try:
@@ -589,6 +585,7 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
 
