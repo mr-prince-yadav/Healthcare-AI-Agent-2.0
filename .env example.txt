@@ -1,0 +1,11 @@
+# Supabase Configuration
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+# AI / LLM Configuration
+GOOGLE_API_KEY=your-gemini-api-key
+
+# Relay Webhook
+RELAY_WEBHOOK_URL=your-relay-webhook-url
+
