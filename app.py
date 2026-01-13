@@ -115,6 +115,29 @@ input {
 
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+
+/* ---- FIX TAB CLIPPING (PROFILE TAB ISSUE) ---- */
+div[data-baseweb="tab-list"] {
+    overflow-x: visible !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+}
+
+/* Prevent first tab from sliding out */
+button[data-baseweb="tab"] {
+    margin-left: 0 !important;
+    transform: none !important;
+}
+
+/* Extra safety for Streamlit container */
+section.main > div {
+    overflow: visible !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- SCHEDULER BOOTSTRAP ----------------
 if "scheduler_started" not in st.session_state:
@@ -639,6 +662,7 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
 
