@@ -417,11 +417,21 @@ def main():
                 prompt = f"""
                 You are a mental health and healthcare assistant.
                 User profile: {json.dumps(st.session_state.profile)}
-                Conversation: {st.session_state.mental_chat}
+                MAX_HISTORY = 6
+                chat_history = st.session_state.mental_chat[-MAX_HISTORY:]
+                
+                Conversation: {chat_history}
+
                 """
 
-                reply = llm.invoke([HumanMessage(content=prompt)]).content
+                try:
+                    reply = llm.invoke([HumanMessage(content=prompt)]).content
+                except Exception as e:
+                    reply = "⚠️ I'm having trouble right now. Please try again shortly."
+                    print("[Mental Chat Error]", e)
+                
                 st.session_state.mental_chat.append(("assistant", reply))
+
 
         # Display chat
         for role, m in st.session_state.mental_chat:
@@ -542,9 +552,13 @@ def main():
         if st.button("Send", key="help_chat_send"):
             if query:
                 prompt = f"User profile: {json.dumps(st.session_state.profile)}\nUser question: {query}"
-                response = llm.invoke([HumanMessage(content=prompt)])
-                st.info(response.content)
-       
+                try:
+                    response = llm.invoke([HumanMessage(content=prompt)])
+                    st.info(response.content)
+                except Exception as e:
+                    st.error("⚠️ AI service temporarily unavailable.")
+                    print("[Help Chat Error]", e)
+
         # ---------------- SETTINGS TAB ----------------
     with tabs[7]:
         st.subheader("⚙️ Settings")
@@ -575,6 +589,7 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
 
