@@ -45,141 +45,11 @@ def save_profile(user_id, profile):
 
 # ---------------------- INIT ----------------------
 st.set_page_config(page_title="Healthcare Agent")
-st.markdown("""
-<style>
+def load_css():
+    with open("main.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-/* ================== ROOT / THEME ================== */
-:root {
-    --radius: 14px;
-    --shadow: 0 8px 24px rgba(0,0,0,.08);
-}
-
-.stApp {
-    background-color: var(--background-color);
-    color: var(--text-color);
-}
-
-/* ================== LAYOUT FIXES ================== */
-section.main > div {
-    padding-top: 1rem;
-    overflow-x: hidden;
-}
-
-/* ================== CARDS ================== */
-.health-card,
-.stAlert,
-.stInfo,
-.stSuccess,
-.stWarning,
-.stError {
-    background-color: var(--secondary-background-color) !important;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    border: none !important;
-}
-
-/* ================== BUTTONS ================== */
-.stButton button {
-    border-radius: 12px;
-    font-weight: 600;
-    padding: 0.55rem 1rem;
-}
-
-.stButton button:hover {
-    transform: translateY(-1px);
-}
-
-/* ================== INPUTS ================== */
-input,
-textarea,
-select {
-    background-color: var(--secondary-background-color) !important;
-    color: var(--text-color) !important;
-    border-radius: 12px !important;
-    border: 1px solid rgba(128,128,128,0.25) !important;
-}
-
-/* ================== CHAT ================== */
-.stChatMessage {
-    background-color: var(--secondary-background-color);
-    border-radius: 14px;
-    padding: 10px;
-    margin-bottom: 8px;
-    box-shadow: var(--shadow);
-}
-
-.stChatInputContainer {
-    position: sticky;
-    bottom: 0;
-    background-color: var(--background-color);
-    padding-top: 10px;
-}
-
-/* ================== TABS (NO CLIPPING EVER) ================== */
-div[data-baseweb="tab-list"] {
-    display: flex !important;
-    justify-content: flex-start !important;
-    gap: 10px;
-    padding: 10px 16px;
-    background-color: var(--secondary-background-color);
-    border-radius: 16px;
-    overflow-x: auto !important;
-    scrollbar-width: none;
-}
-
-div[data-baseweb="tab-list"]::-webkit-scrollbar {
-    display: none;
-}
-
-button[data-baseweb="tab"] {
-    min-width: 56px;
-    height: 48px;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    border-radius: 14px;
-    font-size: 18px;
-    border: 1px solid rgba(128,128,128,0.2);
-    transition: all 0.2s ease;
-}
-
-/* ACTIVE TAB */
-button[data-baseweb="tab"][aria-selected="true"] {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white !important;
-    border: none;
-    box-shadow: 0 6px 18px rgba(102,126,234,0.4);
-}
-
-/* ================== HEADERS ================== */
-h1, h2, h3, h4 {
-    font-weight: 700;
-}
-
-/* ================== METRICS ================== */
-[data-testid="stMetricValue"] {
-    font-size: 1.4rem;
-}
-
-/* ================== IMAGE ================== */
-img {
-    border-radius: 14px;
-}
-
-/* ================== MOBILE ================== */
-@media (max-width: 768px) {
-    section.main > div {
-        padding: 0.5rem;
-    }
-    button[data-baseweb="tab"] {
-        min-width: 46px;
-        height: 42px;
-        font-size: 16px;
-    }
-}
-
-</style>
-""", unsafe_allow_html=True)
-
+load_css()
 
 
 # ---------------- SCHEDULER BOOTSTRAP ----------------
@@ -705,6 +575,7 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
 
