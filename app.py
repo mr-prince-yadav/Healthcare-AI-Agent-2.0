@@ -140,14 +140,14 @@ def main():
 
     # ---------------- MAIN TABS ----------------
     tabs = st.tabs([
-        "👤 Profile",
-        "🩺 Symptom Checker",
-        "💊 Medication Reminder",
-        "📊 Health Tracker",
-        "🧠 Mental Health",
-        "📅 Appointments",
-        "🤖 Help",
-        "⚙️ Settings"
+        "👤",
+        "🩺",
+        "💊",
+        "📊",
+        "🧠",
+        "📅",
+        "🤖",
+        "⚙️"
     ])
 
     # ---------------- PROFILE TAB ----------------
@@ -569,5 +569,6 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
