@@ -6,7 +6,6 @@ llm = ChatGoogleGenerativeAI(
     model="models/gemini-2.5-flash",
     temperature=0.2,
     google_api_key=GOOGLE_API_KEY,
-    max_output_tokens=1024
 )
 
 )
@@ -61,4 +60,5 @@ def mental_health_node(state: dict) -> dict:
         "You are directed to a counsellor."
     )
     return state
+
 
