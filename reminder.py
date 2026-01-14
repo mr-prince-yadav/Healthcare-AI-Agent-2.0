@@ -112,9 +112,12 @@ def send_appointment_email(user_id, appointment_str, action, new_appt=None):
     elif action == "deleted":
         subject = "Appointment Cancelled"
         body = f"Dear {profile.get('name','User')},\n\nYour appointment scheduled for {appointment_str} has been cancelled."
-    elif action == "rescheduled" and new_appt:
+    elif action == "rescheduled":
         subject = "Appointment Rescheduled"
-        body = f"Dear {profile.get('name','User')},\n\nYour appointment has been rescheduled:\nFrom: {appointment_str}\nTo: {new_appt}"
+        if new_appt:
+            body = f"Dear {profile.get('name','User')},\n\nYour appointment has been rescheduled:\nFrom: {appointment_str}\nTo: {new_appt}"
+        else:
+            body = f"Dear {profile.get('name','User')},\n\nYour appointment has been rescheduled:\n{appointment_str}"
     else:
         return
 
@@ -122,8 +125,8 @@ def send_appointment_email(user_id, appointment_str, action, new_appt=None):
         sent = send_email(to=email, subject=subject, body=body)
         if sent:
             sent_immediate_appointments.add(key)
-            print(f"[{datetime.now(IST)}] {action.capitalize()} email sent to {user_id} for {appointment_str}")
+            print(f"[{datetime.now()}] {action.capitalize()} email sent to {user_id} for {appointment_str}")
         else:
-            print(f"[{datetime.now(IST)}] Failed to send {action} email to {user_id}")
+            print(f"[{datetime.now()}] Failed to send {action} email to {user_id}")
     except Exception:
-        print(f"[{datetime.now(IST)}] Error sending {action} email to {user_id}:\n{traceback.format_exc()}")
+        print(f"[{datetime.now()}] Error sending {action} email to {user_id}:\n{traceback.format_exc()}")
