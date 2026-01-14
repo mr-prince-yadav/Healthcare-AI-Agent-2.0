@@ -6,10 +6,18 @@ def create_user(email: str, password: str) -> bool:
             "email": email,
             "password": password
         })
-        return res.user is not None
+
+        # If Supabase did not return an error, signup was accepted
+        if res.error:
+            print(f"[create_user] Supabase error: {res.error}")
+            return False
+
+        return True  # confirmation email may still be required
+
     except Exception as e:
-        print(f"[create_user] Error: {e}")
+        print(f"[create_user] Exception: {e}")
         return False
+
 
 
 def authenticate_user(email: str, password: str):
@@ -22,3 +30,4 @@ def authenticate_user(email: str, password: str):
     except Exception as e:
         print(f"[authenticate_user] Error: {e}")
         return None
+
