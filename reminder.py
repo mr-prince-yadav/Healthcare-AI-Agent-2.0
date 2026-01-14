@@ -53,12 +53,12 @@ def check_and_send_reminders():
             med_dt = datetime.combine(now.date(), datetime.strptime(med_time_str, "%H:%M").time())
             reminder_dt = med_dt - timedelta(minutes=1)
 
-            key = (user_id, med["med_name"], today_str)
+            key = (user_id, med["med_name"], med_time_str, today_str)
             if key in sent_medication_reminders:
                 continue
 
             # Send if current time is within ±1 minute of med time
-            if abs((med_dt - now).total_seconds()) <= 180:
+            if abs((reminder_dt - now).total_seconds()) <= 180:
                 subject = f"Medication Reminder: {med['med_name']}"
                 body = (
                     f"Dear {profile.get('name','User')},\n\n"
@@ -153,4 +153,5 @@ def send_appointment_email(user_id, appointment_str, action, new_appt=None):
         print(f"[{datetime.now()}] {action.capitalize()} email sent to {user_id} for {appointment_str}")
     else:
         print(f"[{datetime.now()}] Failed to send {action} email to {user_id}")
+
 
