@@ -3,8 +3,6 @@ from supabase_client import supabase_admin
 from datetime import datetime, timedelta
 from relay_email import send_email
 
-import pytz
-IST = pytz.timezone("Asia/Kolkata")
 
 
 # -------------------- Database helpers --------------------
@@ -20,7 +18,7 @@ sent_immediate_appointments = set()       # (user_id, appt_str, action)
 
 # -------------------- Reminder & Immediate email logic --------------------
 def check_and_send_reminders():
-    now = datetime.now(IST)
+    now = datetime.now()
     today_str = now.strftime("%Y-%m-%d")
     current_day_abbr = now.strftime("%a")  # "Mon", "Tue", etc.
 
@@ -53,19 +51,18 @@ def check_and_send_reminders():
             med_dt = datetime.combine(now.date(), datetime.strptime(med_time_str, "%H:%M").time())
             reminder_dt = med_dt - timedelta(minutes=1)
 
-            key = (user_id, med["med_name"], med_time_str, today_str)
+            key = (user_id, med["med_name"], today_str)
             if key in sent_medication_reminders:
                 continue
 
             # Send if current time is within ±1 minute of med time
-            if abs((reminder_dt - now).total_seconds()) <= 180:
+            if abs((reminder_dt - now).total_seconds()) <= 60:
                 subject = f"Medication Reminder: {med['med_name']}"
                 body = (
                     f"Dear {profile.get('name','User')},\n\n"
                     f"It's time to take {med['med_name']} at {med_time_str} today."
                 )
                 sent = send_email(to=email, subject=subject, body=body)
-                print("[REMINDER EMAIL]", email, "SENT =", sent)
                 if sent:
                     sent_medication_reminders.add(key)
                     print(f"[{now}] Medication reminder sent to {user_id} for {med['med_name']}")
@@ -153,5 +150,3 @@ def send_appointment_email(user_id, appointment_str, action, new_appt=None):
         print(f"[{datetime.now()}] {action.capitalize()} email sent to {user_id} for {appointment_str}")
     else:
         print(f"[{datetime.now()}] Failed to send {action} email to {user_id}")
-
-
