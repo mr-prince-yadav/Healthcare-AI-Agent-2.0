@@ -1,5 +1,5 @@
 
-# Healthcare Agent AI
+# 🩺 Healthcare Agent AI
 
 **Healthcare Agent AI** is a Streamlit-based web application that provides a personal healthcare assistant with features such as symptom checking, medication reminders, health tracking, mental health support, appointment scheduling, and personalized recommendations. The backend uses Python and Supabase for user management and data persistence, and AI modules for intelligent insights.
 
@@ -180,20 +180,19 @@ streamlit run app.py --server.port $PORT --server.enableCORS false
 ---
 
 
-## 📝 License
+## 📃 License
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE) This project is open source and intended for educational use.
 
 
 ---
-
 ## 👤 About the Author
 I am Prince Yadav, a Aspiring Data Analyst!
 <br><br>Connect with Me
 
 <p align="left">
-  <strong>📧 Email:</strong> <a href = mailto:py63535@gmail.com> py63535@gmail.com </a> <br>
-  <strong>🔗 LinkedIn:</strong> <a href="www.linkedin.com/in/mr-prince-yadav">linkedin.com/in/mr-prince-yadav</a>
+  <strong>📧 Email:</strong> <a href= mailto:py63535@gmail.com> py63535@gmail.com </a> <br>
+  <strong>🔗 LinkedIn:</strong> <a href="https://www.linkedin.com/in/mr-prince-yadav/">linkedin.com/in/mr-prince-yadav</a>
 </p>
 <br>
 ⭐ If you find this repository helpful, please consider giving it a star! <br>
